@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Example API</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      body {
+        width: 100dvw;
+        height: 100dvh;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        flex-direction: column;
+      }
+      form {
+        display: grid;
+        grid-template-columns: 1fr 3fr;
+        width: 100%;
+        max-width: 400px;
+        padding: 2rem;
+        row-gap: 4px;
+        input {
+          padding: 4px 8px;
+        }
+      }
+      .button-group {
+        grid-column: 1 / -1;
+        display: flex;
+        gap: 4px;
+        justify-content: stretch;
+      }
+
+      button {
+        width: 100%;
+        padding: 4px 8px;
+      }
+
+      #toast {
+        position: fixed;
+        bottom: 20px;
+        left: 50%;
+        transform: translateX(-50%) translateY(20px);
+        background: #333;
+        color: #fff;
+        padding: 10px 20px;
+        border-radius: 8px;
+        display: none;
+        z-index: 999;
+        font-size: 14px;
+        opacity: 0;
+        transition: opacity 0.3s ease, transform 0.3s ease;
+      }
+    </style>
+  </head>
+  <body>
+    <form onsubmit="postUser(event)">
+      <label>Endpoint: </label>
+      <input
+        type="text"
+        id="endpoint"
+        placeholder="http://localhost:8200/user"
+        value="http://localhost:8200/user"
+        required
+      />
+      <label>Name: </label>
+      <input type="text" id="name" placeholder="Geeleed" required />
+      <label>Email: </label>
+      <input type="email" id="email" placeholder="geeleed@mail.com" required />
+      <div class="button-group">
+        <button type="submit">Submit</button>
+        <button type="button" onclick="deleteUsers()">Delete Users</button>
+        <button type="button" onclick="readUsers()">Read Users</button>
+      </div>
+    </form>
+    <div id="toast"></div>
+
+    <script>
+      const endpoint = document.querySelector("#endpoint");
+      const name = document.querySelector("#name");
+      const email = document.querySelector("#email");
+      if (localStorage.getItem("endpoint")) {
+        endpoint.value = localStorage.endpoint;
+      } else {
+        localStorage.setItem("endpoint", endpoint.value);
+      }
+      name.focus();
+
+      function showToast(message, isError = false) {
+        const toast = document.getElementById("toast");
+        toast.textContent = message;
+        toast.style.background = isError ? "#e74c3c" : "#2ecc71";
+
+        // ตั้งค่าเริ่มต้นก่อนแสดง
+        toast.style.display = "block";
+        toast.style.opacity = "0";
+        toast.style.transform = "translateX(-50%) translateY(20px)";
+
+        // รอ 100ms แล้วค่อยแสดง (ให้ CSS transition ทำงาน)
+        setTimeout(() => {
+          toast.style.opacity = "1";
+          toast.style.transform = "translateX(-50%) translateY(0)";
+        }, 100);
+
+        // ซ่อนหลังจาก 2 วินาที
+        setTimeout(() => {
+          toast.style.opacity = "0";
+          toast.style.transform = "translateX(-50%) translateY(20px)";
+          setTimeout(() => {
+            toast.style.display = "none";
+          }, 300); // รอให้ transition จบก่อน
+        }, 2000);
+      }
+
+      const postUser = async (event) => {
+        event.preventDefault();
+        try {
+          const res = await fetch(endpoint.value, {
+            method: "POST",
+            headers: {
+              "content-type": "application/json",
+            },
+            body: JSON.stringify({
+              name: name.value,
+              email: email.value,
+            }),
+          });
+          if (!res.ok) throw new Error("Post failed");
+          await res.json();
+          name.value = "";
+          email.value = "";
+          name.focus();
+          showToast("บันทึกสำเร็จ");
+        } catch (err) {
+          console.error(err);
+          showToast("บันทึกไม่สำเร็จ", true);
+        }
+      };
+
+      const deleteUsers = async () => {
+        try {
+          const res = await fetch(endpoint.value, {
+            method: "DELETE",
+          });
+          if (!res.ok) throw new Error("Delete failed");
+          showToast("ลบข้อมูลสำเร็จ");
+        } catch (err) {
+          console.error(err);
+          showToast("ลบข้อมูลไม่สำเร็จ", true);
+        }
+      };
+
+      const readUsers = async () => {
+        try {
+          window.open(endpoint.value, "_blank");
+          showToast("เปิดหน้าข้อมูลแล้ว");
+        } catch (err) {
+          console.error(err);
+          showToast("ไม่สามารถเปิดหน้าข้อมูลได้", true);
+        }
+      };
+
+      endpoint.addEventListener("change", (event) => {
+        localStorage.setItem("endpoint", event.target.value);
+      });
+    </script>
+  </body>
+</html>
